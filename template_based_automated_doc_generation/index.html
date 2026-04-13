@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calcutta High Court — Legal Document System</title>
+
+    <!-- External CSS -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Libraries -->
+    <script src="https://unpkg.com/pizzip@3.1.4/dist/pizzip.min.js"></script>
+    <script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+
+    <header class="hdr">
+        <div class="hdr-in">
+            <div class="emblem">HC</div>
+            <div class="hdr-txt">
+                <h1>Calcutta High Court</h1>
+                <h2>Legal Document Generation System</h2>
+                <p>Original Side · Commercial Division · Prototype v1.0</p>
+                <div class="format-badge">📘 DOCX Template Mode</div>
+            </div>
+        </div>
+        <div class="gold-rule"></div>
+    </header>
+
+    <main class="main">
+
+        <!-- ── STEP 1: Template ── -->
+        <div class="card" id="s1">
+            <div class="card-tab">
+                <div class="card-num">I</div>
+                <div class="card-line"></div>
+            </div>
+            <div class="card-body">
+                <div class="card-label">Step One — Select Template</div>
+                <p class="card-desc">Upload a <strong>Word document (.docx) template</strong> containing
+                    <code>{{PLACEHOLDER}}</code> tags, or pick a previously saved template.
+                </p>
+
+                <div class="info-box">
+                    <strong>How to format your DOCX template</strong>
+                    Use placeholders in your Word document — the system auto-detects the format used:<br>
+                    • Single braces: <code>{camelCase}</code> e.g. <code>{leaseDatee}</code>,
+                    <code>{tenantName}</code><br>
+                    • Double braces: <code>{{UPPER_CASE}}</code> e.g. <code>{{CASE_NUMBER}}</code>,
+                    <code>{{JUDGE_NAME}}</code><br>
+                    Loop/conditional tags like <code>{#list}</code> and <code>{/list}</code> are automatically removed.
+                </div>
+
+                <!-- Saved templates -->
+                <div id="tmplSection">
+                    <div id="tmplLib" class="tmpl-grid"></div>
+                    <div class="divider-or" id="orDivider" style="display:none">or upload new</div>
+                </div>
+
+                <!-- Drop zone -->
+                <div class="drop-zone" id="dropZone">
+                    <input type="file" id="fileIn"
+                        accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                    <span class="drop-icon">📘</span>
+                    <div class="drop-txt">Drop a .docx here, or click to browse</div>
+                    <div class="drop-hint">Word document must contain {{PLACEHOLDER}} tags e.g. {{CASE_NUMBER}},
+                        {{JUDGE_NAME}}</div>
+                </div>
+                <div class="file-pill" id="filePill" style="display:none">
+                    <span style="font-size:20px">✅</span>
+                    <span class="file-pill-name" id="pillName"></span>
+                    <button class="btn-txt" onclick="resetFile()">Change</button>
+                </div>
+
+                <!-- Save option -->
+                <div class="save-row" id="saveRow" style="display:none">
+                    <input type="checkbox" id="saveCk">
+                    <label for="saveCk">Save as template</label>
+                    <input type="text" id="saveName" class="fi" style="max-width:200px;padding:6px 11px;font-size:14px"
+                        placeholder="Template name">
+                </div>
+
+                <div class="status" id="s1msg"></div>
+                <div class="btn-row">
+                    <button class="btn btn-p" id="s1btn" onclick="doStep1()" disabled>⚖ Scan Placeholders</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── STEP 2: Fill Fields ── -->
+        <div class="card locked" id="s2">
+            <div class="card-tab">
+                <div class="card-num">II</div>
+                <div class="card-line"></div>
+            </div>
+            <div class="card-body">
+                <div class="card-label">Step Two — Fill Fields</div>
+                <p class="card-desc">All placeholders found in the template are listed below. Fill every field to
+                    continue.</p>
+                <div id="tagArea" style="display:none">
+                    <div class="tag-lbl">Placeholders found:</div>
+                    <div class="tag-cloud" id="tagCloud"></div>
+                </div>
+                <div class="fields-grid" id="fGrid"></div>
+                <div class="status" id="s2msg"></div>
+                <div class="btn-row">
+                    <button class="btn btn-p" id="s2btn" onclick="doStep2()" disabled>👁 Preview Document</button>
+                    <button class="btn btn-s" onclick="clearFields()">Clear All</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── STEP 3: Preview ── -->
+        <div class="card locked" id="s3">
+            <div class="card-tab">
+                <div class="card-num">III</div>
+                <div class="card-line"></div>
+            </div>
+            <div class="card-body">
+                <div class="card-label">Step Three — Review & Preview</div>
+                <p class="card-desc">Verify all values are correct. The preview below renders your filled document.</p>
+
+                <div class="prev-lbl">Field Values</div>
+                <ul class="prev-list" id="prevList"></ul>
+
+                <!-- Live DOCX preview -->
+                <div style="margin-top:18px">
+                    <div class="prev-lbl">Document Preview</div>
+                    <div class="docx-prev-wrap" id="docxPreview">
+                        <p style="color:#bbb;font-style:italic;text-align:center">Preview will appear here…</p>
+                    </div>
+                </div>
+
+                <div class="status" id="s3msg"></div>
+                <div class="btn-row" style="margin-top:18px">
+                    <button class="btn btn-s"
+                        onclick="unlock('s2');document.getElementById('s2').scrollIntoView({behavior:'smooth'})">← Edit
+                        Fields</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── STEP 4: Download ── -->
+        <div class="card locked" id="s4">
+            <div class="card-tab">
+                <div class="card-num">IV</div>
+            </div>
+            <div class="card-body">
+                <div class="card-label">Step Four — Download</div>
+                <p class="card-desc">Download the filled Word document. Open in Microsoft Word, LibreOffice, or Google
+                    Docs to print or sign.</p>
+
+                <div class="dl-grid">
+                    <div class="dl-card" onclick="downloadDOCX()">
+                        <div class="dl-icon">📘</div>
+                        <div class="dl-type">Download Word Document</div>
+                        <div class="dl-desc">.docx · Fully formatted · Ready to print or sign</div>
+                    </div>
+                </div>
+
+                <div class="status" id="s4msg"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- External JS -->
+    <script src="script.js" defer></script>
+</body>
+
+</html>
